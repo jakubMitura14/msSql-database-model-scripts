@@ -139,4 +139,6 @@ END
 
 
 
-#query 1 On which shift the printer had failure given 
+# query 1 On which shift the printer had failure given idbreaking and period of looking
+
+
