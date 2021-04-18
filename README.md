@@ -89,20 +89,54 @@ END
 
 
 
+```
+
+## dataFailureOverlapB
+ as stated before  the  failures periods may overlap we need to be able to fuse the all periods that overlapped hence this table creating utility table  that  looks to given interval of time and return all failures that had happened in this period and associated dates date min and date max is representing time or specified failure and  newestPre , newestEnd represent the beginning and eng of accumulated , fused overlapping intervals
+```
+
+alter  PROCEDURE dataFailureOverlapB
+	-- Add the parameters for the stored procedure here
+	@dateFrom DateTime,
+	@dateTo DateTime
+
+AS
+BEGIN
+
+	SET NOCOUNT ON;
+
+
+--with prim  as  ( select idBreaking ,min(dateTimeOfStatusChange) as dateMin, max(dateTimeOfStatusChange) as dateMax from PrinterStatusLog 
+--where  idBreaking in (select distinct p1.idBreaking from  PrinterStatusLog as p1 where dateTimeOfStatusChange between @dateFrom AND @dateTo  ) group by idBreaking)
+--,dobl as(select *, DATEDIFF(D, dateMin,dateMax) as failureIntervalTime from prim )
+----so now we have 
+--select *  from dobl
+
+
+
+with prim  as  ( select idBreaking, min(dateTimeOfStatusChange) as dateMin, max(dateTimeOfStatusChange) as dateMax from PrinterStatusLog 
+where  idBreaking in (select distinct p1.idBreaking from  PrinterStatusLog as p1 where dateTimeOfStatusChange between @dateFrom AND @dateTo  ) group by idBreaking)
+,diffr as(select *, DATEDIFF(D, dateMin,dateMax) as failureIntervalTime from prim)
+--so now we have to establish are those periods overlapping if so set corrected begin an end dates
+-- first we will dublicate  the date min and date max column so later it will make us finding the overl
+,dobl as (select  dateMin as dateMinB ,dateMax as dateMaxB from diffr)
+--below we are looking for new begining and end dates of each intervals weather they are encompassed in any other interval if they are we will return the beginning or end date of this encompassing interval
+--there may be also the case that the new begining and end dates are still in some intervals hence we need to establish in which intervals we have overlapping so
+--each case we have a begining date and look is it in some other interval - some other idBreaking  - this may return multiple id breaking  we do it for all of the id breaking with both begining and end  time
+-- so we will repeat procedure
+,tri as (select *, newPre=(select top 1 dateMinB from dobl where dateMin between dateMinB And dateMaxB Order by dateMinB asc), newEnd =  (select top 1 dateMaxB from dobl where dateMax between dateMinB And dateMaxB Order by dateMaxB desc)   from diffr)
+,triB as (select newPre as newPreB, newEnd as newEndB from tri)
+-- now we need to do it one more time in case we have deeply nested structure
+,tetra as (select idBreaking,dateMin,dateMax,  newestPre=(select top 1 newPreB from triB where newPre between newPreB And newEndB Order by newPreB asc), newestEnd =  (select top 1 newEndB from triB where newEnd between newPreB And newEndB Order by newEndB desc)   from tri)
+-- now we need to iteratively add data about  work shifts using data from 
+select * from tetra
+
+END
+
 
 
 ```
 
 
 
-
-
-
-
-
-
-
-
-
-
-#query 1 On which shift the printer had failure
+#query 1 On which shift the printer had failure given 
