@@ -141,4 +141,46 @@ END
 
 # query 1 On which shift the printer had failure given idbreaking and period of looking
 
+```
+select [dbo].[getShiftOfDateFunct](datemin) from  dataFailureOverlapC('2020-04-01 00:00:00','2020-12-02 23:59:59') where idBreaking = 1
+
+```
+
+![image](https://user-images.githubusercontent.com/53857487/115269941-1bb6b300-a13c-11eb-9fad-fb4c1f464d29.png)
+
+# query 2 On which Shift  printer was repaired
+
+```
+select [dbo].[getShiftOfDateFunct](datemax) from  dataFailureOverlapC('2020-04-01 00:00:00','2020-12-02 23:59:59') where idBreaking = 1
+
+```
+![image](https://user-images.githubusercontent.com/53857487/115270397-8d8efc80-a13c-11eb-8125-4a2dd5c8a9de.png)
+
+
+# query 3 Sum the time the printer was broken in given period of time (includin weekends)
+
+```
+with prim as (select distinct newestPre, newestEnd  from  dataFailureOverlapC('2020-04-01 00:00:00','2020-12-02 23:59:59'))
+select sum(DATEDIFF(dd,newestPre, newestEnd)) from prim 
+
+```
+![image](https://user-images.githubusercontent.com/53857487/115272025-3b4edb00-a13e-11eb-893d-2f29bed6a05a.png)
+
+# query 4  time in which printer was non functioning  excluding weekends of some particular printer 
+so i will just sum duration of all  shifts related to failure
+![image](https://user-images.githubusercontent.com/53857487/115406826-d18f0980-a1ef-11eb-8a4e-0900a5490cec.png)
+
+
+
+# query 5 time in which printers were non functioning  excluding weekends
+so i will just sum duration of all  shifts related to failure
+
+![image](https://user-images.githubusercontent.com/53857487/115405013-23cf2b00-a1ee-11eb-8b34-39266a27da39.png)
+
+
+
+
+
+
+
 
