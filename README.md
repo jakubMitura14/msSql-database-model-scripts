@@ -284,9 +284,23 @@ select distinct companyBranch, count(idOrderHistory) over (partition by companyB
 ![image](https://user-images.githubusercontent.com/53857487/116290477-c7db4800-a793-11eb-9d0a-325cb38a1f7e.png)
 
 
-## query 11 What will be 
+## query 11 What will be joint time of printing all required elements in printer
 --Jaki będzie łączny czas drukowania zleconych oddziałowi elementów. 
 
+--first filtering only those that we have not yet completed printing
+with prim as (select * from [dbo].[OrderHistory] where [dateTimeOfCompletion] is null )
+select distinct companyBranch, count(idOrderHistory) over (partition by companyBranch) as numberOfNotCompleted from prim
+
+
+
+
+## query 12 
+--Czy jest możliwe przyjęcie zgłoszenia zamówienia w danym oddziale aby było zrealizowane w ciągu 36 h roboczych. 
+
+
+
+## query 13
+--Czy awaria danego urządzenia zagraża czasom poprawnej realizacji zleceń już zgłoszonych w danym oddziale. (Trigger)
 
 
 
