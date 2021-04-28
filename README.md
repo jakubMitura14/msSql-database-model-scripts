@@ -287,16 +287,41 @@ select distinct companyBranch, count(idOrderHistory) over (partition by companyB
 ## query 11 What will be joint time of printing all required elements in printer
 --Jaki będzie łączny czas drukowania zleconych oddziałowi elementów. 
 
---first filtering only those that we have not yet completed printing
-with prim as (select * from [dbo].[OrderHistory] where [dateTimeOfCompletion] is null )
-select distinct companyBranch, count(idOrderHistory) over (partition by companyBranch) as numberOfNotCompleted from prim
 
+-- selecting only non completed orders for printer 1 joining data about element sets that are not yet completed
+with prim as (select [dateTimeOfIssuing],[quantity],idElement as idEl  from [dbo].[OrderHistory] join SetDetail on [dbo].[OrderHistory].ChosenSet = SetDetail.idSet
+where [dateTimeOfCompletion] is null  And idPrinter =1)
+-- we add data about how many minutes element needs in order to be printed
+, dobl as ( select * from prim join [dbo].[Element] on Element.IdElement = prim.idEl)
+--choosing only needed columns to clean up
+,tri as (select [dateTimeOfIssuing],[quantity] ,[timeOfPrintMInutes] from dobl)
+-- multiplying time of print of an element with amount of this element
+, tetra as (select [dateTimeOfIssuing], [quantity]*[timeOfPrintMInutes] as totalTime from tri )
+-- now we choose earlier date related to not completed order and sum all of the time required to complete what we have to do 
+select  SUM(totalTime) from tetra
 
+![image](https://user-images.githubusercontent.com/53857487/116455440-5964bb80-a861-11eb-9df7-9adc1c00dddb.png)
 
+result is in minutes
 
 ## query 12 
 --Czy jest możliwe przyjęcie zgłoszenia zamówienia w danym oddziale aby było zrealizowane w ciągu 36 h roboczych. 
 
+-- selecting only non completed orders for company brach 1 joining data about element sets that are not yet completed
+with prim as (select [dateTimeOfIssuing],[quantity],idElement as idEl  from [dbo].[OrderHistory] join SetDetail on [dbo].[OrderHistory].ChosenSet = SetDetail.idSet
+where [dateTimeOfCompletion] is null  And [companyBranch] =1)
+-- we add data about how many minutes element needs in order to be printed
+, dobl as ( select * from prim join [dbo].[Element] on Element.IdElement = prim.idEl)
+--choosing only needed columns to clean up
+,tri as (select [dateTimeOfIssuing],[quantity] ,[timeOfPrintMInutes] from dobl)
+-- multiplying time of print of an element with amount of this element
+, tetra as (select [dateTimeOfIssuing], [quantity]*[timeOfPrintMInutes] as totalTime from tri )
+-- now we choose earlier date related to not completed order and sum all of the time required to complete what we have to do 
+,fifth as (select  SUM(totalTime)/60 as timeRes from tetra)
+select * from fifth
+
+
+![image](https://user-images.githubusercontent.com/53857487/116456299-6635df00-a862-11eb-86ff-9a9b7cecea5e.png)
 
 
 ## query 13
