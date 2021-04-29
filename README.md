@@ -305,7 +305,9 @@ select  SUM(totalTime) from tetra
 result is in minutes
 
 ## query 12 
+Is it possible to admit new order  to be completed in 36 hours
 --Czy jest możliwe przyjęcie zgłoszenia zamówienia w danym oddziale aby było zrealizowane w ciągu 36 h roboczych. 
+
 
 -- selecting only non completed orders for company brach 1 joining data about element sets that are not yet completed
 with prim as (select [dateTimeOfIssuing],[quantity],idElement as idEl  from [dbo].[OrderHistory] join SetDetail on [dbo].[OrderHistory].ChosenSet = SetDetail.idSet
@@ -317,14 +319,15 @@ where [dateTimeOfCompletion] is null  And [companyBranch] =1)
 -- multiplying time of print of an element with amount of this element
 , tetra as (select [dateTimeOfIssuing], [quantity]*[timeOfPrintMInutes] as totalTime from tri )
 -- now we choose earlier date related to not completed order and sum all of the time required to complete what we have to do 
-,fifth as (select  SUM(totalTime)/60 as timeRes from tetra)
-select * from fifth
+,fifth as (select  SUM(totalTime) as timeRes, MIN([dateTimeOfIssuing])  as minDate from tetra)
+select DATEADD(mi,timeRes ,minDate) from fifth
+
+![image](https://user-images.githubusercontent.com/53857487/116456836-00962280-a863-11eb-9ac3-597bcf3b85cc.png)
+
+So we returned the time when the printer will become available
 
 
-![image](https://user-images.githubusercontent.com/53857487/116456299-6635df00-a862-11eb-86ff-9a9b7cecea5e.png)
-
-
-## query 13
+## query 13 Does the failure of given printer will lead to a risk 
 --Czy awaria danego urządzenia zagraża czasom poprawnej realizacji zleceń już zgłoszonych w danym oddziale. (Trigger)
 
 
