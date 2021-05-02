@@ -308,10 +308,69 @@ result is in minutes
 Is it possible to admit new order  to be completed in 36 hours
 --Czy jest możliwe przyjęcie zgłoszenia zamówienia w danym oddziale aby było zrealizowane w ciągu 36 h roboczych. 
 
+main function
+```
+--@compBranch number of company branch that we are intrested in
+ALTER function [dbo].[timeToPrint] (@compBranch int) returns  int
+AS
+begin
 
+declare @shiftLengthInMinutes int;
+set @shiftLengthInMinutes = 8*60;
+
+-- first we need to establish how many printers this company branch have
+declare @numberOfPrinters int;
+set @numberOfPrinters = (select COUNT(*) from EveryPrinter where companyBranch = @compBranch) ;
+
+declare @dateFrom DateTime; -- the date of earliest non completed order
+declare @minutesToComlete int;
+
+-- below quantities were caclulated using the 
+set @minutesToComlete = (select timeRes from timeToPrintHelper (@compBranch , @numberOfPrinters ));-- how many minutes it would ake us to complete this  (ignoring presennce of weekends ...)
+set @dateFrom = (select minDate from timeToPrintHelper (@compBranch , @numberOfPrinters ));-- the earliest date of not completed order 
+
+
+--- setting the begining of the shift when we had the order accepted
+declare @dateTimeOfFirstShiftBeginning DateTime;
+set @dateTimeOfFirstShiftBeginning = [dbo].[giveBeginingOfShift](@dateFrom); 		 		  
+
+-- now  we need to calculate the time left in a shift  on which the order was registered   in minutes
+declare @minutesOnFirstShiftLeft int;
+set @minutesOnFirstShiftLeft =  @shiftLengthInMinutes - DATEDIFF ( mi , @dateTimeOfFirstShiftBeginning , @dateFrom ) ;
+
+-- time left needed after first shift to complete all tasks
+declare @timeMinusFirstShift int;
+set @timeMinusFirstShift = @minutesToComlete - @minutesOnFirstShiftLeft;
+
+-- subtracting from total time @minutesOnFirstShiftLeft and calculating  how many full 8 hour shifts we still need and how many minutes on the last shift we will need 
+declare @fullShiftsNumber int;
+set @fullShiftsNumber = (SELECT @timeMinusFirstShift / @shiftLengthInMinutes  AS Integer);
+
+declare @minutesInLastShift int;
+set @minutesInLastShift = (SELECT @timeMinusFirstShift % @shiftLengthInMinutes  AS Remainder);
+
+-- below we calculate the minutes related to shifts during which we would print 
+
+declare @finalDate DateTime;
+set @finalDate = (select  [dbo].[getFinalShiftDate] (@fullShiftsNumber ,@dateFrom   ) );
+
+-- now we need to add minutes to the final date as we have only the begining of the last shift for now
+
+declare @finalDateTime DateTime;
+set @finalDateTime = DATEADD(MINUTE,@minutesInLastShift,@finalDate  );
+
+return DATEDIFF(HH,@dateFrom, @finalDateTime )
+end 
+
+```
+helper functions
+
+```
+ALTER function [dbo].[timeToPrintHelper] (@compBranch int, @numberOfPrinters int)
+RETURNS  TABLE as return (
 -- selecting only non completed orders for company brach 1 joining data about element sets that are not yet completed
-with prim as (select [dateTimeOfIssuing],[quantity],idElement as idEl  from [dbo].[OrderHistory] join SetDetail on [dbo].[OrderHistory].ChosenSet = SetDetail.idSet
-where [dateTimeOfCompletion] is null  And [companyBranch] =1)
+with prim as (select [dateTimeOfCompletion],[dateTimeOfIssuing],[quantity],idElement as idEl, [idPrinter]    from [dbo].[OrderHistory] join SetDetail on [dbo].[OrderHistory].ChosenSet = SetDetail.idSet)
+,primB as ( select * from prim join [dbo].[EveryPrinter] on prim.[idPrinter] = EveryPrinter.idEveryPrinter     where [dateTimeOfCompletion] is null  And [companyBranch] =@compBranch)
 -- we add data about how many minutes element needs in order to be printed
 , dobl as ( select * from prim join [dbo].[Element] on Element.IdElement = prim.idEl)
 --choosing only needed columns to clean up
@@ -319,17 +378,40 @@ where [dateTimeOfCompletion] is null  And [companyBranch] =1)
 -- multiplying time of print of an element with amount of this element
 , tetra as (select [dateTimeOfIssuing], [quantity]*[timeOfPrintMInutes] as totalTime from tri )
 -- now we choose earlier date related to not completed order and sum all of the time required to complete what we have to do 
-,fifth as (select  SUM(totalTime) as timeRes, MIN([dateTimeOfIssuing])  as minDate from tetra)
-select DATEADD(mi,timeRes ,minDate) from fifth
+,fifth as (select  cast(SUM(totalTime) as float)/@numberOfPrinters as timeRes, MIN([dateTimeOfIssuing])  as minDate from tetra)
+-- i need to diveide the time by the amount of printers available in a branch; ad calculate the  added time excluding weekends as was earlier done ...
 
-![image](https://user-images.githubusercontent.com/53857487/116456836-00962280-a863-11eb-9ac3-597bcf3b85cc.png)
+-- how many minutes it would ake us to complete this  (ignoring presennce of weekends ...)
+-- now  we need to calculate the time  between 
 
-So we returned the time when the printer will become available
+ select * from fifth)
+
+
+```
+
+
+
+```
+ALTER function [dbo].[getFinalShiftDate] (@fullShiftsNumber int,@dateFrom DateTime ) returns  DateTime
+AS
+begin
+
+declare @modifiedDateTime DateTime;
+set @modifiedDateTime = (select fullDate from  [dbo].[giveLastShiftBegining] (@fullShiftsNumber ,@dateFrom   ) where  rowN =@fullShiftsNumber+1 )
+
+return @modifiedDateTime
+end 
+
+
+```
+
+
 
 
 ## query 13 Does the failure of given printer will lead to a risk 
---Czy awaria danego urządzenia zagraża czasom poprawnej realizacji zleceń już zgłoszonych w danym oddziale. (Trigger)
+--Czy awaria danego urządzenia zagraża czasom poprawnej realizacji zleceń już zgłoszonych w danym oddziale. 
 
+basically we just need what will happen when we will reduce the number of available printers to 1 less 
 
 
 
