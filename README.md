@@ -404,16 +404,25 @@ end
 
 
 ```
+```
+select [dbo].[timeToPrint](1,0)
+```
+![image](https://user-images.githubusercontent.com/53857487/116813547-77c60200-ab54-11eb-81c9-e9a046c25e4f.png)
 
 
 
 
 ## query 13 Does the failure of given printer will lead to a risk 
 --Czy awaria danego urządzenia zagraża czasom poprawnej realizacji zleceń już zgłoszonych w danym oddziale. 
+```
+select [dbo].[timeToPrint](1,1)
+```
+
 
 basically we just need what will happen when we will reduce the number of available printers to 1 less 
 
 
+![image](https://user-images.githubusercontent.com/53857487/116813553-82809700-ab54-11eb-9e63-3825b4da4460.png)
 
 
 
