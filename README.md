@@ -233,6 +233,7 @@ so i will just sum duration of all  shifts related to failure
 
 
 ## query 6  point out to company branch where printers broke most frequently 
+```
 --Wskaż oddział w którym w 2020 roku urządzenia psuły się najczęściej 
 
 ![image](https://user-images.githubusercontent.com/53857487/116288828-315a5700-a792-11eb-82d9-791fd570227a.png)
@@ -242,11 +243,12 @@ so i will just sum duration of all  shifts related to failure
 with prim as (select distinct newestPre, newestEnd, idEveryPrinter from  dataFailureOverlapC('2019-04-01 00:00:00','2023-12-02 23:59:59')  )
 select companyBranch , sum([dbo].[getCountOfShifts](newestPre, newestEnd)*8/24)  as timeOfBroken from  prim  
 		join [dbo].[EveryPrinter] on prim.idEveryPrinter = EveryPrinter.idEveryPrinter  group by companyBranch  order by timeOfBroken desc 
-
+```
 ![image](https://user-images.githubusercontent.com/53857487/116289059-6e264e00-a792-11eb-8ac4-d75329d99969.png)
 
 
 ## query 8   How many devices are in any particular state 
+```
 --Ile % urządzeń jest w poszczególnej fazach awarii w stosunku do ilości wszystkich dostępnych  
 
 -- first we are getting all of the current statuses 
@@ -262,6 +264,7 @@ where    dateTimeOfStatusChange = (select top 1 dateTimeOfStatusChange from [dbo
 ,withPrinterNumberPerStatus as (select *, count(idP) over(partition by companyBranch, printerStatus) as numberInEachStaus from withPrinterNumberPerBranch)
 select *, (CAST(   numberInEachStaus as FLOAT) / numberOfPrinters) as percent_in_status from withPrinterNumberPerStatus
 
+```
 
 ![image](https://user-images.githubusercontent.com/53857487/116289991-484d7900-a793-11eb-86b7-bcde56bccd9c.png)
 
@@ -269,24 +272,26 @@ select *, (CAST(   numberInEachStaus as FLOAT) / numberOfPrinters) as percent_in
 ## query 9 calculate on how many shifts the printer was not working
 --Wskaż na ilu zmianach nie pracowała maszyna (wliczając to zmianę na której zgłoszono awarię i na której uruchomiono ja znów produkcyjnie ) 
 
+```
 with prim as (select distinct newestPre, newestEnd  from  dataFailureOverlapGivenPrinter('2020-04-01 00:00:00','2020-12-02 23:59:59',1))
 select  sum([dbo].[getCountOfShifts](newestPre, newestEnd)) from prim
-
+```
 ![image](https://user-images.githubusercontent.com/53857487/116290177-7b900800-a793-11eb-9c0f-53eeee69bba0.png)
 
 
 ## query 10  How many orders each comapny branch have
+```
 --Ile zamówień ma dany oddział do realizacji. 
 --first filtering only those that we have not yet completed printing
 with prim as (select * from [dbo].[OrderHistory] where [dateTimeOfCompletion] is null )
 select distinct companyBranch, count(idOrderHistory) over (partition by companyBranch) as numberOfNotCompleted from prim
-
+```
 ![image](https://user-images.githubusercontent.com/53857487/116290477-c7db4800-a793-11eb-9d0a-325cb38a1f7e.png)
 
 
 ## query 11 What will be joint time of printing all required elements in printer
 --Jaki będzie łączny czas drukowania zleconych oddziałowi elementów. 
-
+```
 
 -- selecting only non completed orders for printer 1 joining data about element sets that are not yet completed
 with prim as (select [dateTimeOfIssuing],[quantity],idElement as idEl  from [dbo].[OrderHistory] join SetDetail on [dbo].[OrderHistory].ChosenSet = SetDetail.idSet
@@ -299,7 +304,7 @@ where [dateTimeOfCompletion] is null  And idPrinter =1)
 , tetra as (select [dateTimeOfIssuing], [quantity]*[timeOfPrintMInutes] as totalTime from tri )
 -- now we choose earlier date related to not completed order and sum all of the time required to complete what we have to do 
 select  SUM(totalTime) from tetra
-
+```
 ![image](https://user-images.githubusercontent.com/53857487/116455440-5964bb80-a861-11eb-9df7-9adc1c00dddb.png)
 
 result is in minutes
